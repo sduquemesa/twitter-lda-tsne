@@ -32,7 +32,7 @@ ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN_KEY")
 ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 
 CURRENT_TIME = datetime.utcnow()                    # current date and time in UTC
-SEARCH_TIME = CURRENT_TIME - timedelta(minutes=60)     # look for tweets one hour back in time
+SEARCH_TIME = CURRENT_TIME - timedelta(minutes=5)     # look for tweets one hour back in time
 
 ### Search API parameters
 SEARCH_QUERY = ''
@@ -253,9 +253,10 @@ if __name__ == "__main__":
     tweets_df['weigths'] = list(arr)
     tweets_df['topic'] = topic_num
 
-    tweets_df.drop(columns=['tokens'])
+    tweets_df = tweets_df.drop(columns=['tokens'])
     if DEBUG:
         print('# of docs:', tweets_df.shape[0]) 
         print(tweets_df.head())
 
-    if not DEBUG: print(tweets_df.to_json(orient='records'))
+    if not DEBUG: 
+        print(tweets_df.to_json(orient='records'))
