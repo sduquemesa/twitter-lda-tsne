@@ -1,6 +1,6 @@
 # Sonic Explorations on Twitter
 
-**Data** Twitter, LDA, tSNE.js 
+**Data** Twitter API, LDA, tSNE.js 
 **Sound** Magenta's MusicVAE, Tone.js 
 **Visual** p5.js
 
