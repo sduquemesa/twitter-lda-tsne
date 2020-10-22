@@ -1,3 +1,6 @@
-/.env
+.env
+/venv
 /script.js
 /venv
+/node_modules
+package-lock.json
