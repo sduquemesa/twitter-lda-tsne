@@ -4,32 +4,35 @@ const { spawn } = require('child_process');
 const app = express()
 app.use(express.static('public'))
 
-app.set('port', '3000')
+app.set('port', '5000')
 
-var server = app.listen(3000, () => {
+var server = app.listen(5000, () => {
     var host = server.address().address;
     var port = server.address().port;
-    console.log('Example app listening at http://' + host + ':' + port);
+    console.log('App listening at ' + host + ':' + port);
 });
 
 
 // Handle API route: run python program and send data to api endpoint
-let run_python = new Promise(function(success, nosuccess) {
-    const { spawn } = require('child_process');
-    const pyprog = spawn('python', ['twitter_lda.py']);
-
-    pyprog.stdout.on('data', (data) => {
-        success(data);
-    });
-    
-    pyprog.stderr.on('data', (data) => {
-        nosuccess(data);
-    });
-});
-
 app.get('/data', (req, res) => {
-    run_python.then(function(data) {
-        // console.log(data.toString());
-        res.end(data);
+    const { spawn } = require('child_process');
+    const python = spawn('python', ['twitter_lda.py']);
+    console.log('Handling request:');
+
+    let collected_data = [];
+    python.stdout.on('data', function (data) {
+        console.log('Piping data...');
+        collected_data.push(data);
+        // res.write(data);
+        // res.end();
     });
-})
+    python.stderr.on('data', (data) => {
+        res.write('ERROR:')
+        res.write(data);
+    });
+    python.on('close', (code) => {
+        console.log(`DONE: child process close all stdio with code ${code}`);
+        res.send(decodeURIComponent(collected_data.join('')));
+        res.end();
+    })
+});

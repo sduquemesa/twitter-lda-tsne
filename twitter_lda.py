@@ -22,9 +22,13 @@ from gensim.utils import lemmatize, simple_preprocess
 import pandas as pd
 import numpy as np
 
+from more_itertools import sliced
+
+from sklearn.manifold import TSNE
+
 ####------------- PARAMETERS -------------####
 
-DEBUG = False
+DEBUG = True
 
 CONSUMER_KEY = os.getenv("TWITTER_CONSUMER_KEY")
 CONSUMER_SECRET = os.getenv("TWITTER_CONSUMER_SECRET")
@@ -32,8 +36,8 @@ ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN_KEY")
 ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 
 CURRENT_TIME = datetime.utcnow()                    # current date and time in UTC
-SEARCH_TIME = CURRENT_TIME - timedelta(minutes=5)     # look for tweets one hour back in time
-
+SEARCH_TIME = CURRENT_TIME - timedelta(hours=24)     # look for tweets one hour back in time
+# SEARCH_TIME = CURRENT_TIME - timedelta(minutes=30)     # look for tweets one hour back in time
 ### Search API parameters
 SEARCH_QUERY = ''
 GEOCODE = '6.244203,-75.5812119,40km'
@@ -41,7 +45,7 @@ LANG = 'es'
 RESULT_TYPE = 'recent'   # mixed, recent or popular
 RESULTS_PER_CALL = 100  # Max is 100 for Standard API
 
-FILENAME = 'tweets_from_week_search.jsonl'  # Where the Tweets should be saved
+FILENAME = 'tweets.json'  # Where the Tweets should be saved
 
 PRINT_AFTER_X = 100 # Script prints an update to the CLI every time it collected another X Tweets
 
@@ -116,8 +120,8 @@ def tweet_collection(api):
 
 def parse_tweet(tweet_json):
 
-    tweet_json_str = json.dumps(tweet_json, ensure_ascii=False)
-    tweet = json.loads(tweet_json_str)
+    tweet_json_str = json.dumps(tweet_json, ensure_ascii=False).encode('utf8')
+    tweet = json.loads(tweet_json_str.decode('utf8'))
     tweet_id = tweet['id']
     tweet_date = datetime.strptime(tweet['created_at'],"%a %b %d %H:%M:%S +0000 %Y")
 
@@ -248,10 +252,22 @@ if __name__ == "__main__":
     for i, row_list in enumerate( lda_model[ corpus ] ):
         topic_weights.append([w for i, w in row_list[0]])
     arr = pd.DataFrame(topic_weights).fillna(0).values
+    # Dominant topic number in each doc
     topic_num = np.argmax(arr, axis=1)
 
     tweets_df['weigths'] = list(arr)
     tweets_df['topic'] = topic_num
+
+    # tSNE Dimension Reduction
+    tsne_model = TSNE(n_components=1, 
+                        verbose=0, 
+                        random_state=123, 
+                        angle=.99, 
+                        init='pca'
+                        )
+    tsne_lda = tsne_model.fit_transform(arr)
+
+    tweets_df['tsne_coords'] = list(tsne_lda)
 
     tweets_df = tweets_df.drop(columns=['tokens'])
     if DEBUG:
@@ -259,4 +275,7 @@ if __name__ == "__main__":
         print(tweets_df.head())
 
     if not DEBUG: 
-        print(tweets_df.to_json(orient='records'))
+        json_str = tweets_df.to_json(orient='records')
+        for chunk in list(sliced(json_str, 1000)): print(chunk, end='')
+
+    tweets_df.to_json(FILENAME, orient='records')
